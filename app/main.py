@@ -1,10 +1,12 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, File, UploadFile
 from pydantic import BaseModel, Field
 
 from app.bigram_model import BigramModel
 from app.embedding_model import EmbeddingModel
+from app.cnn_classifier import CNNClassifier
 
 app = FastAPI(title="Gentext API", description="Bigram text generation and spaCy word embeddings")
+cnn_classifier = CNNClassifier()
 
 # Sample corpus for the bigram model
 corpus = [
@@ -81,3 +83,12 @@ def get_similarity(request: SimilarityRequest):
         "word2": request.word2,
         "similarity": embedding_model.calculate_similarity(request.word1, request.word2),
     }
+@app.post("/classify")
+async def classify_image(file: UploadFile = File(...)):
+    """Assignment 2: classify an uploaded image into one of the 10 CIFAR-10 classes."""
+    image_bytes = await file.read()
+    try:
+        result = cnn_classifier.predict(image_bytes)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Could not read the file as an image")
+    return {"filename": file.filename, **result}
