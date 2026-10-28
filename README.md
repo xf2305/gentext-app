@@ -63,3 +63,28 @@ curl -X POST http://127.0.0.1:8000/similarity \
      -d '{"word1": "apple", "word2": "car"}'
 # {"word1":"apple","word2":"car","similarity":0.217...}
 ```
+## Assignment 3: GAN for MNIST Digit Generation
+
+### Model
+`app/gan_model.py` implements the Generator and Discriminator:
+
+- **Generator:** noise (100) → Linear → 7×7×128 → ConvTranspose2d (128→64, 14×14) + BatchNorm + ReLU → ConvTranspose2d (64→1, 28×28) + Tanh
+- **Discriminator:** Conv2d (1→64, 14×14) + LeakyReLU(0.2) → Conv2d (64→128, 7×7) + BatchNorm + LeakyReLU(0.2) → Flatten → Linear → 1
+
+### Training
+```
+python train_gan.py
+```
+Downloads MNIST to `data/`, trains for 10 epochs (Adam, lr = 0.0002, betas = (0.5, 0.999)), saves a sample grid for each epoch to `samples/`, and saves the generator weights to `app/gan_generator.pth`.
+
+### API endpoint
+Start the server:
+```
+uvicorn app.main:app --reload
+```
+`GET /generate_digits?n=16` returns a PNG grid of `n` generated digits (1 ≤ n ≤ 64).
+
+Example: http://127.0.0.1:8000/generate_digits?n=16
+
+### Sample output (epoch 10)
+![Generated digits](samples/epoch_10.png)

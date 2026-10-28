@@ -6,7 +6,7 @@ from app.embedding_model import EmbeddingModel
 from app.cnn_classifier import CNNClassifier
 from app.digit_generator import DigitGenerator
 
-app = FastAPI(title="Gentext API", description="Bigram text generation and spaCy word embeddings")
+app = FastAPI(title="Gentext API", description="Bigram text generation, spaCy embeddings, CNN image classification, and GAN digit generation")
 cnn_classifier = CNNClassifier()
 digit_generator = DigitGenerator()
 
