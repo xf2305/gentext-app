@@ -1,12 +1,14 @@
-from fastapi import FastAPI, HTTPException, File, UploadFile
+from fastapi import FastAPI, HTTPException, File, UploadFile, Query, Response
 from pydantic import BaseModel, Field
 
 from app.bigram_model import BigramModel
 from app.embedding_model import EmbeddingModel
 from app.cnn_classifier import CNNClassifier
+from app.digit_generator import DigitGenerator
 
 app = FastAPI(title="Gentext API", description="Bigram text generation and spaCy word embeddings")
 cnn_classifier = CNNClassifier()
+digit_generator = DigitGenerator()
 
 # Sample corpus for the bigram model
 corpus = [
@@ -92,3 +94,8 @@ async def classify_image(file: UploadFile = File(...)):
     except Exception:
         raise HTTPException(status_code=400, detail="Could not read the file as an image")
     return {"filename": file.filename, **result}
+@app.get("/generate_digits")
+def generate_digits(n: int = Query(16, ge=1, le=64)):
+    """Assignment 3: generate n handwritten digits with the trained GAN, returned as a PNG grid."""
+    image_bytes = digit_generator.generate(n)
+    return Response(content=image_bytes, media_type="image/png")
