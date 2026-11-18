@@ -6,7 +6,7 @@ from app.embedding_model import EmbeddingModel
 from app.cnn_classifier import CNNClassifier
 from app.digit_generator import DigitGenerator
 
-app = FastAPI(title="Gentext API", description="Bigram text generation, spaCy embeddings, CNN image classification, and GAN digit generation")
+app = FastAPI(title="Gentext API", description="Bigram text generation, spaCy embeddings, CNN image classification, and GAN, Energy-Based and Diffusion digit generation")
 cnn_classifier = CNNClassifier()
 digit_generator = DigitGenerator()
 
@@ -99,3 +99,21 @@ def generate_digits(n: int = Query(16, ge=1, le=64)):
     """Assignment 3: generate n handwritten digits with the trained GAN, returned as a PNG grid."""
     image_bytes = digit_generator.generate(n)
     return Response(content=image_bytes, media_type="image/png")
+
+# ---------- Module 8: Energy-Based and Diffusion digit generators ----------
+from app.module8_generators import EBMGenerator, DiffusionGenerator
+
+ebm_generator = EBMGenerator()
+diffusion_generator = DiffusionGenerator()
+
+
+@app.get("/generate_digits_ebm")
+def generate_digits_ebm(n: int = Query(16, ge=1, le=64), steps: int = Query(256, ge=1, le=1000)):
+    """Module 8: generate n digits with the Energy-Based Model (Langevin dynamics), returned as a PNG grid."""
+    return Response(content=ebm_generator.generate(n, steps), media_type="image/png")
+
+
+@app.get("/generate_digits_diffusion")
+def generate_digits_diffusion(n: int = Query(16, ge=1, le=64), steps: int = Query(20, ge=1, le=500)):
+    """Module 8: generate n digits with the Diffusion model (reverse diffusion), returned as a PNG grid."""
+    return Response(content=diffusion_generator.generate(n, steps), media_type="image/png")

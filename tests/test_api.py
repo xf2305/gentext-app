@@ -39,3 +39,21 @@ def test_similarity():
     r = client.post("/similarity", json={"word1": "apple", "word2": "orange"})
     assert r.status_code == 200
     assert 0 < r.json()["similarity"] <= 1
+
+
+# ---------- Module 8: Energy-Based and Diffusion generators ----------
+def test_generate_digits_ebm():
+    r = client.get("/generate_digits_ebm?n=4&steps=5")
+    assert r.status_code == 200
+    assert r.headers["content-type"] == "image/png"
+
+
+def test_generate_digits_diffusion():
+    r = client.get("/generate_digits_diffusion?n=4&steps=5")
+    assert r.status_code == 200
+    assert r.headers["content-type"] == "image/png"
+
+
+def test_generate_digits_invalid_n():
+    assert client.get("/generate_digits_ebm?n=0").status_code == 422
+    assert client.get("/generate_digits_diffusion?n=100").status_code == 422
