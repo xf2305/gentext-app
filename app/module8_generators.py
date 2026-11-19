@@ -1,4 +1,4 @@
-# Module 8 Part 1: Energy-Based Model + Diffusion Model digit generators
+# Module 8 Part 1: Energy-Based Model + Diffusion Model image generators (CIFAR-10, 3x32x32)
 import copy
 import io
 import math
@@ -14,6 +14,7 @@ from torchvision.utils import make_grid
 
 EBM_WEIGHTS = Path(__file__).parent / "ebm.pth"
 DIFFUSION_WEIGHTS = Path(__file__).parent / "diffusion.pth"
+CHANNELS = 3  # CIFAR-10 images are RGB
 
 
 def to_png(images):
@@ -33,11 +34,11 @@ def swish(x):
 
 
 class EnergyModel(nn.Module):
-    """(N, 1, 32, 32) image -> (N, 1) energy. Low energy = looks real."""
+    """(N, 3, 32, 32) image -> (N, 1) energy. Low energy = looks real."""
 
     def __init__(self):
         super().__init__()
-        self.conv1 = nn.Conv2d(1, 16, kernel_size=5, stride=2, padding=2)
+        self.conv1 = nn.Conv2d(CHANNELS, 16, kernel_size=5, stride=2, padding=2)
         self.conv2 = nn.Conv2d(16, 32, kernel_size=3, stride=2, padding=1)
         self.conv3 = nn.Conv2d(32, 64, kernel_size=3, stride=2, padding=1)
         self.conv4 = nn.Conv2d(64, 64, kernel_size=3, stride=2, padding=1)
@@ -77,11 +78,11 @@ class Buffer:
 
     def __init__(self, model, device, batch_size=128):
         self.model, self.device, self.batch_size = model, device, batch_size
-        self.examples = [torch.rand((1, 1, 32, 32), device=device) * 2 - 1 for _ in range(batch_size)]
+        self.examples = [torch.rand((1, CHANNELS, 32, 32), device=device) * 2 - 1 for _ in range(batch_size)]
 
     def sample_new_exmps(self, steps, step_size, noise):
         n_new = np.random.binomial(self.batch_size, 0.05)
-        new_imgs = torch.rand((n_new, 1, 32, 32), device=self.device) * 2 - 1
+        new_imgs = torch.rand((n_new, CHANNELS, 32, 32), device=self.device) * 2 - 1
         old_imgs = torch.cat(random.choices(self.examples, k=self.batch_size - n_new), dim=0)
         imgs = langevin_sample(self.model, torch.cat([new_imgs, old_imgs], dim=0), steps, step_size, noise)
         self.examples = (list(torch.split(imgs, 1, dim=0)) + self.examples)[:8192]
@@ -132,7 +133,7 @@ class UNet(nn.Module):
 
     def __init__(self, widths=(32, 64, 96, 128)):
         super().__init__()
-        self.init_conv = nn.Conv2d(1, widths[0], 1)
+        self.init_conv = nn.Conv2d(CHANNELS, widths[0], 1)
         self.upsample_noise = nn.Upsample(size=32, mode="nearest")
 
         c = widths[0] + 32
@@ -146,7 +147,7 @@ class UNet(nn.Module):
         for w in reversed(widths[:-1]):               # UpBlocks: 4 -> 8 -> 16 -> 32
             self.up.append(nn.ModuleList([ResidualBlock(c + w, w), ResidualBlock(w + w, w)]))
             c = w
-        self.final_conv = nn.Conv2d(c, 1, 1)
+        self.final_conv = nn.Conv2d(c, CHANNELS, 1)
         nn.init.zeros_(self.final_conv.weight)
 
     def forward(self, x, noise_var):
@@ -210,7 +211,7 @@ class DiffusionModel(nn.Module):
     def generate(self, n, steps=20):
         """Start from Gaussian noise, predict the image, re-noise one step less, repeat."""
         device = next(self.parameters()).device
-        current = torch.randn(n, 1, 32, 32, device=device)
+        current = torch.randn(n, CHANNELS, 32, 32, device=device)
         for i in range(steps):
             t = torch.full((n, 1, 1, 1), 1.0 - i / steps, device=device)
             noise_rates, signal_rates = diffusion_schedule(t)
@@ -230,7 +231,7 @@ class EBMGenerator:
             self.model.load_state_dict(torch.load(EBM_WEIGHTS, map_location="cpu"))
 
     def generate(self, n=16, steps=256):
-        start = torch.rand(n, 1, 32, 32) * 2 - 1
+        start = torch.rand(n, CHANNELS, 32, 32) * 2 - 1
         return to_png(langevin_sample(self.model, start, steps, step_size=10, noise_std=0.005))
 
 
@@ -239,8 +240,7 @@ class DiffusionGenerator:
         self.model = DiffusionModel()
         if DIFFUSION_WEIGHTS.exists():
             self.model.load_state_dict(torch.load(DIFFUSION_WEIGHTS, map_location="cpu"))
+            self.model.ema_network.load_state_dict(self.model.network.state_dict())  # EMA hasn't caught up after 5 epochs, use the trained weights
 
     def generate(self, n=16, steps=20):
         return to_png(self.model.generate(n, steps))
-
-

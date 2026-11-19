@@ -107,13 +107,13 @@ ebm_generator = EBMGenerator()
 diffusion_generator = DiffusionGenerator()
 
 
-@app.get("/generate_digits_ebm")
-def generate_digits_ebm(n: int = Query(16, ge=1, le=64), steps: int = Query(256, ge=1, le=1000)):
-    """Module 8: generate n digits with the Energy-Based Model (Langevin dynamics), returned as a PNG grid."""
+@app.get("/generate_images_ebm")
+def generate_images_ebm(n: int = Query(16, ge=1, le=64), steps: int = Query(256, ge=1, le=1000)):
+    """Module 8: generate n CIFAR-10 images with the Energy-Based Model (Langevin dynamics), returned as a PNG grid."""
     return Response(content=ebm_generator.generate(n, steps), media_type="image/png")
 
 
-@app.get("/generate_digits_diffusion")
-def generate_digits_diffusion(n: int = Query(16, ge=1, le=64), steps: int = Query(20, ge=1, le=500)):
-    """Module 8: generate n digits with the Diffusion model (reverse diffusion), returned as a PNG grid."""
+@app.get("/generate_images_diffusion")
+def generate_images_diffusion(n: int = Query(16, ge=1, le=64), steps: int = Query(20, ge=1, le=500)):
+    """Module 8: generate n CIFAR-10 images with the Diffusion model (reverse diffusion), returned as a PNG grid."""
     return Response(content=diffusion_generator.generate(n, steps), media_type="image/png")
